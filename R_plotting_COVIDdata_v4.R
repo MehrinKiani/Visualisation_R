@@ -1,0 +1,53 @@
+library(sqldf)
+library(maps)
+library(mapproj)
+library(maptools)
+library(sp)
+library(data.table)
+library(ggplot2)
+
+
+countries_coords= read.csv("datasets_2312_3908_countries.csv")
+
+covid_data = read.csv("WHO-COVID-19-global-data.csv")
+covid_data$Date_reported <- as.Date(covid_data$Date_reported)
+covid_data_1July = covid_data[(covid_data$Date_reported=='2020-06-30'),]
+
+data(world.cities)
+
+world.cities <- world.cities[world.cities$pop>1000,]
+myworld<-world.cities[!duplicated(world.cities$country.etc), ]
+coordinates(world.cities) <- ~long+lat 
+proj4string(world.cities) <- '+init=epsg:4326'
+
+world_and_covid <-merge(myworld, covid_data_1July, by, by.x='country.etc', by.y='Country', sort = TRUE)
+world2_and_covid <-merge(countries_coords, covid_data_1July, by, by.x='country', by.y='Country_code', sort = TRUE)
+
+results1 <- setdiff(countries_coords$country, covid_data_1July$Country_code) 
+
+covid_cases <- ggplot() +
+  borders("world", colour = "grey", fill = "white") + 
+  #theme_map() +
+  coord_cartesian(ylim = c(-50, 90)) +
+  geom_point(data = world2_and_covid, aes(x = longitude, y = latitude, size = Cumulative_cases),
+             alpha = 0.6, color = "blue") +
+  scale_size(range = c(3,15))+
+  theme_gray()
+
+covid_cases
+
+
+covid_deaths <- ggplot() +
+  borders("world", colour = "grey", fill = "white") + 
+  #theme_map() +
+  coord_cartesian(ylim = c(-50, 90)) +
+  geom_point(data = world2_and_covid, aes(x = longitude, y = latitude, size = Cumulative_deaths),
+             alpha = 0.6, color = "#FF5A0088") +
+  scale_size(range = c(3,15))+
+  theme_gray()
+
+
+covid_deaths
+
+
+#geom_point(data = world_and_covid, aes(x = long, y = lat, size = Cumulative_cases), color = "#FF5A0088")
